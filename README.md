@@ -13,3 +13,8 @@ This repository contains a risk assessment, a Python-based file security toolkit
 1. Install dependencies:
    ```bash
    pip install cryptography
+
+# Execute the toolkit:
+
+```Bash
+python security_toolkit.py
