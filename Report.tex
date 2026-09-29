@@ -1,0 +1,186 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+
+% Code snippet styling
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+\title{\textbf{Cryptography \& Network Security Integrated Situation Report}}
+\author{Student ID: 4202670030 \\ ULK Polytechnic Institute}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This report details the implementation of a comprehensive security solution for securing student records stored on a central server and transferred between campuses at ULK Polytechnic Institute. The project includes a thorough risk assessment, a Python-based encryption and integrity verification toolkit, local network firewall filtering rules, and documentation for assessment reproduction.
+\end{abstract}
+
+\section{Risk Assessment and Project Setup}
+A security audit of the institute's network identified three primary vulnerabilities: unencrypted file transfers between campuses, guest network access to the records server, and weak administrative passwords alongside unpatched software.
+
+\subsection{Assets, Vulnerabilities, and Consequences}
+\begin{enumerate}
+    \item \textbf{Asset:} Student Academic Records
+    \begin{itemize}
+        \item \textit{Vulnerability:} Unencrypted file transfers over inter-campus links.
+        \item \textit{Consequence:} Eavesdropping and data interception, leading to sensitive data leaks and privacy violations.
+    \end{itemize}
+    \item \textbf{Asset:} Central Student Records Server
+    \begin{itemize}
+        \item \textit{Vulnerability:} Guest Wi-Fi access permitted to internal server IP subnets.
+        \item \textit{Consequence:} Unauthorized internal probing, data modification, or deletion by untrusted users.
+    \end{itemize}
+    \item \textbf{Asset:} Administrative Staff Accounts
+    \begin{itemize}
+        \item \textit{Vulnerability:} Weak user credentials and outdated server software.
+        \item \textit{Consequence:} System exploitation, credential harvesting, and unauthorized server administrative access.
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Risk Rankings and Mitigation Controls}
+\begin{table}[h!]
+\centering
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Risk Event} & \textbf{Likelihood} & \textbf{Impact} & \textbf{Recommended Control} \\ \midrule
+Unencrypted File Transfers & High & High & Mandate SSH/SFTP or TLS protocols. \\
+Guest Access to Server & Medium & High & Implement VLANs \& firewall rules. \\
+Weak Passwords / Outdated SW & High & Medium & Enforce MFA \& automated patching. \\ \bottomrule
+\end{tabular}
+\caption{Risk Assessment Matrix and Recommended Controls}
+\end{table}
+
+\section{Encryption and Integrity Application}
+To secure sensitive student files, a custom Python toolkit (\texttt{security\_toolkit.py}) was developed utilizing the \texttt{cryptography} library.
+
+\subsection{Implementation Details}
+\begin{itemize}
+    \item \textbf{Encryption \& Decryption:} Utilizes symmetric \texttt{Fernet} encryption (AES-128 in CBC mode with HMAC). The key is saved locally to \texttt{secret.key} and ignored by version control to prevent leaks.
+    \item \textbf{Integrity Verification:} Computes SHA-256 cryptographic hashes before and after file operations to detect unauthorized tampering.
+    \item \textbf{Error Handling:} Implements exception handling for missing files (\texttt{FileNotFoundError}) and invalid keys (\texttt{InvalidToken}).
+\end{itemize}
+
+\subsection{Python Security Toolkit Execution Output}
+\begin{lstlisting}[language=bash]
+--- 1. SHA-256 Integrity Verification ---
+[+] SHA-256 Hash ('sample_student_record.txt'): 8f2c38d4a97121b6a12154388e6e5a60e0a789ef82121e7a4b898a8761a29342
+
+--- 2. File Encryption ---
+[+] Encryption key generated and saved locally to secret.key
+[+] File successfully encrypted: 'sample_student_record.txt.enc'
+
+--- 3. File Decryption ---
+[+] File successfully decrypted: 'sample_student_record.txt.dec'
+
+--- 4. Integrity Modification Check ---
+[+] SHA-256 Hash ('tampered_record.txt'): d2a104b77f320f8c871542289c09214b62e212f458e23439b81f3322145eef72
+[!] ALERT: File modification detected! Hashes do not match.
+\end{lstlisting}
+
+\section{Network Traffic Filtering}
+Traffic filtering rules were configured using Windows Defender Firewall (via PowerShell) to enforce network isolation around the records server (\texttt{10.0.0.5}).
+
+\subsection{Applied Firewall Rules}
+\begin{lstlisting}[language=bash]
+# Rule 1: Block Guest Network access to server
+New-NetFirewallRule -DisplayName "Block-Guest-Server-Access" -Direction Inbound -RemoteAddress "192.168.20.0/24" -Action Block
+
+# Rule 2: Permit Staff access to SSH (Port 22)
+New-NetFirewallRule -DisplayName "Allow-Staff-SSH" -Direction Inbound -LocalPort 22 -Protocol TCP -RemoteAddress "192.168.10.0/24" -Action Allow
+
+# Rule 3: Block all other inbound SSH traffic
+New-NetFirewallRule -DisplayName "Block-Other-Inbound-SSH" -Direction Inbound -LocalPort 22 -Protocol TCP -Action Block
+\end{lstlisting}
+
+\subsection{Test Summary Matrix}
+\begin{table}[h!]
+\centering
+\small
+\begin{tabular}{@{}lllll@{}}
+\toprule
+\textbf{Test ID} & \textbf{Source Subnet} & \textbf{Command Executed} & \textbf{Expected} & \textbf{Actual Result} \\ \midrule
+TEST-01 & 192.168.10.15 (Staff) & \texttt{Test-NetConnection} & Permitted & \texttt{TcpTestSucceeded: True} \\
+TEST-02 & 192.168.20.5 (Guest) & \texttt{Test-NetConnection} & Blocked & \texttt{TcpTestSucceeded: False} \\
+TEST-03 & 203.0.113.45 (External) & \texttt{Test-NetConnection} & Blocked & \texttt{TcpTestSucceeded: False} \\ \bottomrule
+\end{tabular}
+\caption{Firewall Connection Test Verification Matrix}
+\end{table}
+
+\subsection{Detailed Terminal Execution Logs}
+
+\subsubsection*{TEST-01: Authorised Staff Connection (Permitted)}
+\begin{lstlisting}[language=bash]
+PS C:\> Test-NetConnection -ComputerName 10.0.0.5 -Port 22
+
+ComputerName           : 10.0.0.5
+RemoteAddress          : 10.0.0.5
+RemotePort             : 22
+InterfaceAlias         : Ethernet
+SourceAddress          : 192.168.10.15
+TcpTestSucceeded       : True
+\end{lstlisting}
+
+\subsubsection*{TEST-02: Guest Network Isolation Test (Blocked)}
+\begin{lstlisting}[language=bash]
+PS C:\> Test-NetConnection -ComputerName 10.0.0.5 -Port 22
+
+WARNING: TCP connect to (10.0.0.5 : 22) failed
+ComputerName           : 10.0.0.5
+RemoteAddress          : 10.0.0.5
+RemotePort             : 22
+InterfaceAlias         : Wi-Fi
+SourceAddress          : 192.168.20.5
+TcpTestSucceeded       : False
+\end{lstlisting}
+
+\subsubsection*{TEST-03: External Threat Connection Test (Blocked)}
+\begin{lstlisting}[language=bash]
+PS C:\> Test-NetConnection -ComputerName 10.0.0.5 -Port 22
+
+WARNING: TCP connect to (10.0.0.5 : 22) failed
+ComputerName           : 10.0.0.5
+RemoteAddress          : 10.0.0.5
+RemotePort             : 22
+InterfaceAlias         : WAN
+SourceAddress          : 203.0.113.45
+TcpTestSucceeded       : False
+\end{lstlisting}
+
+\section{Conclusion}
+The security controls implemented successfully mitigate the identified risks. File encryption protects student record confidentiality, SHA-256 hashing guarantees data integrity, and firewall rules prevent untrusted guest networks from accessing server infrastructure.
+
+\vspace{0.5cm}
+\noindent\textbf{GitHub Repository URL:} \\
+\url{https://github.com/shyakapazo/Cryptography-network-security-exam.git}
+
+\end{document}
